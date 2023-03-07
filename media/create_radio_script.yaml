@@ -5,79 +5,42 @@ blueprint:
   domain: script
   source_url: https://github.com/SergiuToporjinschi/has_blueprints/blob/main/media/create_radio_script.yaml
   input:
-    notify_device:
-      name: Device to notify
-      description: Device needs to run the official Home Assistant app to receive notifications.
+    casting_device:
+      name: Casting device
+      description: Device used for casting media content
       selector:
-        device:
-          integration: mobile_app
-    title:
-      name: "Title"
-      description: "The title of the button shown in the notification."
-      default: ""
-      selector:
-        text:
-    message:
-      name: "Message"
-      description: "The message body"
+        entity:
+          domain: media_player
+    media:
+      name: Media
+      description: "Meadia to cast, radio URL ex: https://live.rockfm.ro/rockfm.aacp"
       selector:
         text:
-    confirm_text:
-      name: "Confirmation Text"
-      description: "Text to show on the confirmation button"
-      default: "Confirm"
+    artwork_logo:
+      name: Artwork & Logo
+      description: An image to use as artwork and logo
       selector:
         text:
-    confirm_action:
-      name: "Confirmation Action"
-      description: "Action to run when notification is confirmed"
-      default: []
-      selector:
-        action:
-    dismiss_text:
-      name: "Dismiss Text"
-      description: "Text to show on the dismiss button"
-      default: "Dismiss"
-      selector:
-        text:
-    dismiss_action:
-      name: "Dismiss Action"
-      description: "Action to run when notification is dismissed"
-      default: []
-      selector:
-        action:
-
 mode: restart
 
 sequence:
   - alias: "Set up variables"
     variables:
-      action_confirm: "{{ 'CONFIRM_' ~ context.id }}"
-      action_dismiss: "{{ 'DISMISS_' ~ context.id }}"
-  - alias: "Send notification"
-    domain: mobile_app
-    type: notify
-    device_id: !input notify_device
-    title: !input title
-    message: !input message
+      artwork_logo: !input artwork_logo
+      logo: "{{ artwork_logo }}"
+  - alias: content
+    service: media_player.play_media
+    target:
+      entity_id: !input casting_device
     data:
-      actions:
-        - action: "{{ action_confirm }}"
-          title: !input confirm_text
-        - action: "{{ action_dismiss }}"
-          title: !input dismiss_text
-  - alias: "Awaiting response"
-    wait_for_trigger:
-      - platform: event
-        event_type: mobile_app_notification_action
-        event_data:
-          action: "{{ action_confirm }}"
-      - platform: event
-        event_type: mobile_app_notification_action
-        event_data:
-          action: "{{ action_dismiss }}"
-  - choose:
-      - conditions: "{{ wait.trigger.event.data.action == action_confirm }}"
-        sequence: !input confirm_action
-      - conditions: "{{ wait.trigger.event.data.action == action_dismiss }}"
-        sequence: !input dismiss_action
+      enqueue: play
+      media_content_id: !input media
+      media_content_type: music
+      extra:
+        thumb: !input artwork_logo
+        stream_type: live
+      metadata:
+        entity_picture: "{{artwork_logo ~ '?t=' ~ now().timestamp()|int }}"
+        thumbnail: "{{artwork_logo ~ '?t=' ~ now().timestamp()|int }}"
+        media_class: audio/mpeg
+        children_media_class:
