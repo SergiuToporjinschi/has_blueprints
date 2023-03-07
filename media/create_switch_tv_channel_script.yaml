@@ -1,0 +1,45 @@
+blueprint:
+  name: Create Switch TV Channel Script
+  description: Creates a script to switch channel/source for a TV
+  domain: script
+  source_url: https://github.com/SergiuToporjinschi/has_blueprints/blob/main/media/create_switch_tv_channel_script.yaml
+  input:
+    casting_device:
+      name: Casting device
+      description: Device used for casting media content
+      selector:
+        entity:
+          domain: media_player
+          multiple: false
+    media:
+      name: Media
+      description: "Meadia to cast, radio URL ex: https://live.rockfm.ro/rockfm.aacp"
+      selector:
+        text: {}
+    artwork_logo:
+      name: Artwork & Logo
+      description: An image to use as artwork and logo
+      selector:
+        text: {}
+mode: restart
+sequence:
+  - alias: Set up variables
+    variables:
+      artwork_logo: !input artwork_logo
+      logo: "{{ artwork_logo }}"
+  - alias: content
+    service: media_player.play_media
+    target:
+      entity_id: !input casting_device
+    data:
+      enqueue: play
+      media_content_id: !input media
+      media_content_type: music
+      extra:
+        thumb: !input artwork_logo
+        stream_type: live
+      metadata:
+        entity_picture: "{{artwork_logo ~ '?t=' ~ now().timestamp()|int }}"
+        thumbnail: "{{artwork_logo ~ '?t=' ~ now().timestamp()|int }}"
+        media_class: audio/mpeg
+        children_media_class:
